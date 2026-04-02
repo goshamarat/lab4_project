@@ -1,9 +1,6 @@
 import os
 import sys
 
-# Добавляем в sys.path корневую папку проекта,
-# чтобы тест мог импортировать файлы из lab4_project
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from compf_k40 import CompfK40
 
