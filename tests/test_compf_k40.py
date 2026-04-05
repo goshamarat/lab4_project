@@ -1,8 +1,3 @@
-import os
-import sys
-
-
-
 from compf_k40 import CompfK40
 
 

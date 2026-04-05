@@ -51,6 +51,8 @@ class CompfK42(Compf):
 
         # Разбираем исходную строку посимвольно
         for i, c in enumerate(text):
+            if c.isspace():
+                continue
             self.pos = i
             self.process_symbol(c)
 

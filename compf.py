@@ -34,9 +34,12 @@ class Compf:
 
     def compile(self, str):
         self.data.clear()
+       
         # Последовательный вызов для всех символов
         # взятой в скобки формулы метода process_symbol
         for c in "(" + str + ")":
+            if c.isspace():           
+                continue
             self.process_symbol(c)
         return " ".join(self.data)
 

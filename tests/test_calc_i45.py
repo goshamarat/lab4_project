@@ -84,3 +84,68 @@ class TestCalcI45:
     def test_invalid_symbol(self):
         with raises(Exception):
             self.c.compile('d--+x')
+
+    # ----------------------------
+    # Новые тесты для compile_with_d
+    # ----------------------------
+
+    # compile_with_d должен возвращать и результат, и итоговое значение d
+    def test_compile_with_d_example1(self):
+        result, d_value = self.c.compile_with_d('d--+d')
+        assert result == -1
+        assert d_value == -1
+
+    def test_compile_with_d_example2(self):
+        result, d_value = self.c.compile_with_d('d--*(2+d)')
+        assert result == 0
+        assert d_value == -1
+
+    # После трёх d-- итоговое d должно стать -3
+    def test_compile_with_d_several_decrements(self):
+        result, d_value = self.c.compile_with_d('d--+d--+d--')
+        assert result == -3
+        assert d_value == -3
+
+    # ----------------------------
+    # Новые тесты на ошибки записи
+    # ----------------------------
+
+    # Нет операции между операндами
+    def test_missing_operator_between_values(self):
+        with raises(Exception):
+            self.c.compile('1+2d--')
+
+    # Две переменные подряд
+    def test_two_values_in_row(self):
+        with raises(Exception):
+            self.c.compile('dd')
+
+    # Нет операции перед скобкой
+    def test_missing_operator_before_parenthesis(self):
+        with raises(Exception):
+            self.c.compile('2(d--+3)')
+
+    # Нет операции после скобки
+    def test_missing_operator_after_parenthesis(self):
+        with raises(Exception):
+            self.c.compile('(2+d)3')
+
+    # Нет операции между скобками
+    def test_missing_operator_between_parentheses(self):
+        with raises(Exception):
+            self.c.compile('(2+d)(3+d--)')
+
+    # Два оператора подряд
+    def test_double_operator(self):
+        with raises(Exception):
+            self.c.compile('2++3')
+
+    # Оператор в начале выражения
+    def test_operator_at_start(self):
+        with raises(Exception):
+            self.c.compile('+2')
+
+    # Выражение заканчивается оператором
+    def test_expression_ends_with_operator(self):
+        with raises(Exception):
+            self.c.compile('2+d--+')

@@ -20,44 +20,98 @@ class CalcI45(Compf):
        после чего уменьшает d на 1
     4. Обычное вычитание '-' запрещено
     5. Поддерживаются операции +, *, / и скобки
-
-    Базовый алгоритм разбора берём из Compf,
-    но вместо обработки строки по символам
-    сначала разбиваем её на токены.
     """
 
     def __init__(self):
-        # Инициализация родительского класса:
-        # создаётся стек операций self.s и список self.data
         super().__init__()
-
-        # Стек числовых результатов, как в обычном Calc
         self.r = Stack()
-
-        # Переменная d по условию изначально равна 0
         self.d = 0
 
     def compile(self, text):
         """
-        Вычисление выражения по заданию И45.
+        Старый совместимый интерфейс:
+        возвращает только результат выражения.
         """
+        result, _ = self.compile_with_d(text)
+        return result
 
-        # Перед каждым новым запуском очищаем состояние
+    def compile_with_d(self, text):
+        """
+        Новый метод:
+        возвращает и результат, и итоговое значение d.
+        """
+        # Сбрасываем состояние перед каждым вычислением
         self.s = Stack()
         self.r = Stack()
         self.d = 0
 
-        # Разбиваем строку на токены:
-        # например d--*(2+d) -> ['d--', '*', '(', '2', '+', 'd', ')']
         tokens = self.tokenize(text)
 
-        # Как и в Compf, искусственно добавляем внешние скобки,
-        # чтобы все операции корректно вытолкнулись из стека
+        # prev_type может быть:
+        # None, 'value', 'op', '(', ')'
+        prev_type = None
+
         for token in ["("] + tokens + [")"]:
+
+            # Определяем тип текущего токена
+#s            if token.isspace():
+#                continue
+            if self.is_value(token):
+                current_type = 'value'
+            elif token in "+*/":
+                current_type = 'op'
+            elif token == "(":
+                current_type = '('
+            elif token == ")":
+                current_type = ')'
+            else:
+                raise Exception(f"Неизвестный токен '{token}'")
+
+            # ----------------------------
+            # Проверки корректности записи
+            # ----------------------------
+
+            # Два операнда подряд: 2d, dd, 2d--
+            if prev_type == 'value' and current_type == 'value':
+                raise Exception("Ошибка: нет операции между операндами")
+
+            # Операнд сразу перед открывающей скобкой: 2(3+d)
+            if prev_type == 'value' and current_type == '(':
+                raise Exception("Ошибка: нет операции перед скобкой")
+
+            # Закрывающая скобка сразу перед операндом: (2+3)4
+            if prev_type == ')' and current_type == 'value':
+                raise Exception("Ошибка: нет операции после скобки")
+
+            # Закрывающая скобка сразу перед открывающей: )( или (2+3)(4+d)
+            if prev_type == ')' and current_type == '(':
+                raise Exception("Ошибка: нет операции между скобками")
+
+            # Оператор в начале или сразу после открывающей скобки
+            if current_type == 'op' and (prev_type is None or prev_type == '('):
+                raise Exception("Ошибка: оператор в неверном месте")
+
+            # Два оператора подряд
+            if prev_type == 'op' and current_type == 'op':
+                raise Exception("Ошибка: два оператора подряд")
+
+            # Закрывающая скобка сразу после оператора: (2+)
+            if prev_type == 'op' and current_type == ')':
+                raise Exception("Ошибка: выражение заканчивается оператором")
+
+            prev_type = current_type
             self.process_symbol(token)
 
-        # В стеке результатов остаётся окончательный ответ
-        return self.r.top()
+        # После вычисления в стеке должен остаться ровно один результат
+        if len(self.r.array) == 0:
+            raise Exception("Ошибка: пустое выражение")
+
+        result = self.r.pop()
+
+        if len(self.r.array) != 0:
+            raise Exception("Ошибка: лишние операнды в выражении")
+
+        return result, self.d
 
     def tokenize(self, text):
         """
@@ -88,8 +142,7 @@ class CalcI45(Compf):
                 tokens.append(c)
                 i += 1
 
-            # Если встретили d, проверяем:
-            # это просто d или конструкция d--
+            # d или d--
             elif c == 'd':
                 if text[i:i + 3] == 'd--':
                     tokens.append('d--')
@@ -98,30 +151,30 @@ class CalcI45(Compf):
                     tokens.append('d')
                     i += 1
 
-            # Разрешённые бинарные операции и скобки
+            # Разрешённые операции и скобки
             elif c in '+*/()':
                 tokens.append(c)
                 i += 1
 
-            # Обычное вычитание запрещено по условию И45
+            # Обычное вычитание запрещено
             elif c == '-':
                 raise Exception("Операция вычитания в И45 не поддерживается")
 
-            # Любой другой символ недопустим
+            # Всё остальное запрещено
             else:
                 raise Exception(f"Недопустимый символ '{c}'")
 
         return tokens
 
+    def is_value(self, token):
+        """
+        Проверка: является ли токен операндом.
+        """
+        return token.isdigit() or token in ('d', 'd--')
+
     def process_symbol(self, token):
         """
         Обработка одного токена.
-
-        Логика та же, что и в Compf:
-        - '(' кладём в стек операций
-        - ')' заставляет выполнить все отложенные операции до '('
-        - оператор сначала выталкивает более приоритетные операции
-        - операнд сразу обрабатывается
         """
         if token == "(":
             self.s.push(token)
@@ -140,23 +193,14 @@ class CalcI45(Compf):
     def process_value(self, token):
         """
         Обработка операнда.
-
-        Возможны три случая:
-        1. Цифра
-        2. Переменная d
-        3. Постфиксная операция d--
         """
         if token.isdigit():
             self.r.push(int(token))
 
         elif token == 'd':
-            # Просто кладём текущее значение d
             self.r.push(self.d)
 
         elif token == 'd--':
-            # Постфиксный декремент:
-            # сначала используем текущее значение d,
-            # потом уменьшаем d на 1
             self.r.push(self.d)
             self.d -= 1
 
@@ -181,8 +225,5 @@ class CalcI45(Compf):
     def priority(c):
         """
         Приоритет операций.
-
-        '+' имеет меньший приоритет,
-        '*' и '/' имеют больший приоритет.
         """
         return 1 if c == "+" else 2

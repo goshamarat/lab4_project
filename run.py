@@ -139,11 +139,12 @@ def run_calc_i45_mode(expr):
 
     try:
         calc = CalcI45()
-        result = calc.compile(expr)
+        result, d_value = calc.compile_with_d(expr)
 
         print_block("Результаты")
         print(f"Исходное выражение : {expr}")
         print(f"Результат          : {result}")
+        print(f"Итоговое значение d: {d_value}")
 
     except Exception as e:
         print(f"Ошибка вычисления И45! {e}")
